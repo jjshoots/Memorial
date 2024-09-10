@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import warnings
 from abc import abstractmethod
-from typing import Any, Generator, Sequence
+from collections.abc import Generator, Sequence
+from typing import Any
 
 from prefetch_generator import prefetch
 
@@ -83,7 +84,7 @@ class ReplayBuffer:
     @prefetch(max_prefetch=1)
     def iter_sample(
         self, batch_size: int, num_iter: int
-    ) -> Generator[Sequence[Any], None, None]:
+    ) -> Generator[Sequence[Any]]:  # pyright: ignore[reportGeneralTypeIssues]
         """iter_sample.
 
         Args:

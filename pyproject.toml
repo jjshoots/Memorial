@@ -37,12 +37,9 @@ include = ["memorial", "memorial.*"]
 [project.urls]
 "Homepage" = "https://github.com/jjshoots/Memorial"
 
+#######################################################################################
+# linters
+#######################################################################################
 [tool.pyright]
-# This is required as the CI pre-commit does not download the module (i.e. numpy, pygame, box2d)
-#   Therefore, we have to ignore missing imports
 reportMissingImports = "none"
-
-[tool.ruff.lint]
-# pyflakes, pycodestyle, isort
-ignore = ["D401", "D203", "D213"]
-select = ["E4", "E7", "E9", "F", "I", "D"]
+include = ["memorial", "test"]

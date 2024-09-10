@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from enum import Enum
-from typing import Literal, Sequence
+from typing import Literal
 
 import numpy as np
 
@@ -97,10 +98,14 @@ class FlatReplayBuffer(ReplayBuffer):
 
         """
         if self.mode == _Mode.NUMPY:
+            # cast from torch if needed
+            if isinstance(thing, torch.Tensor):
+                thing = thing.detach().cpu().numpy()
+
             # cast to the right dtype
-            data = np.asarray(
+            data = np.asarray(  # pyright: ignore[reportGeneralTypeIssues, reportCallIssue]
                 thing,
-                dtype=self.mode_dtype,  # pyright: ignore[reportArgumentType, reportCallIssue]
+                dtype=self.mode_dtype,  # pyright: ignore[reportGeneralTypeIssues, reportArgumentType]
             )
 
             # dim check
@@ -111,7 +116,7 @@ class FlatReplayBuffer(ReplayBuffer):
             data = torch.asarray(
                 thing,
                 device=self.storage_device,
-                dtype=self.mode_dtype,  # pyright: ignore[reportArgumentType]
+                dtype=self.mode_dtype,  # pyright: ignore[reportArgumentType, reportGeneralTypeIssues]
             )
             data.requires_grad_(False)
 
@@ -176,7 +181,7 @@ class FlatReplayBuffer(ReplayBuffer):
                     [
                         self.mode_caller.zeros(
                             (self.mem_size, *item.shape),
-                            dtype=self.mode_dtype,  # pyright: ignore[reportArgumentType, reportCallIssue]
+                            dtype=self.mode_dtype,  # pyright: ignore[reportArgumentType, reportCallIssue, reportGeneralTypeIssues]
                         )
                         for item in array_data
                     ]
@@ -186,7 +191,7 @@ class FlatReplayBuffer(ReplayBuffer):
                     [
                         self.mode_caller.zeros(
                             (self.mem_size, *item.shape[1:]),
-                            dtype=self.mode_dtype,  # pyright: ignore[reportArgumentType, reportCallIssue]
+                            dtype=self.mode_dtype,  # pyright: ignore[reportArgumentType, reportCallIssue, reportGeneralTypeIssues]
                         )
                         for item in array_data
                     ]

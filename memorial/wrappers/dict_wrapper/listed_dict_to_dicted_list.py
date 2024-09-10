@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 
 import numpy as np
 import torch
 
 
-def _iter_nested_keys(base_dict: dict[str, Any]) -> Generator[list[str], None, None]:
+def _iter_nested_keys(
+    base_dict: dict[str, Any]
+) -> Generator[list[str]]:  # pyright: ignore[reportGeneralTypeIssues]
     """Given a nested dictionary, yields a list of keys to each element.
 
     Args:
