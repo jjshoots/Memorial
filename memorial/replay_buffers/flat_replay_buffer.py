@@ -100,7 +100,11 @@ class FlatReplayBuffer(ReplayBuffer):
         if self.mode == _Mode.NUMPY:
             # cast from torch if needed
             if isinstance(thing, torch.Tensor):
-                thing = thing.detach().cpu().numpy()  # pyright: ignore[reportGeneralTypeIssues, reportAttributeAccessIssue]
+                thing = (
+                    thing.detach()  # pyright: ignore[reportGeneralTypeIssues, reportAttributeAccessIssue]
+                    .cpu()
+                    .numpy()
+                )
 
             # cast to the right dtype
             data = np.asarray(  # pyright: ignore[reportGeneralTypeIssues, reportCallIssue]
