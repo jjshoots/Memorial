@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import warnings
 from abc import abstractmethod
 from collections.abc import Generator, Sequence
@@ -44,6 +45,29 @@ class ReplayBuffer:
         A brief view of the memory: \n
         {self.memory}
         """
+
+    def dump(self, fileobj: io.BytesIO | io.BufferedRandom) -> None:
+        """Dump the replay buffer to a fileobj.
+
+        Args:
+            fileobj (io.BytesIO | io.BufferedRandom): filepath
+
+        Returns:
+            None:
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    def load(fileobj: io.BytesIO | io.BufferedRandom) -> ReplayBuffer:
+        """Loads the replay buffer from a fileobj.
+
+        Args:
+            fileobj (io.BytesIO | io.BufferedRandom): filepath
+
+        Returns:
+            None:
+        """
+        raise NotImplementedError
 
     @property
     def nbytes(self) -> int:

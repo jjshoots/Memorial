@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import io
+import json
+import zipfile
 from collections.abc import Sequence
 from enum import Enum
 from typing import Literal
@@ -49,6 +52,15 @@ class FlatReplayBuffer(ReplayBuffer):
         """
         super().__init__(mem_size=mem_size)
 
+        # save the init params for dump and load later
+        self.init_params = {
+            "mem_size": mem_size,
+            "mode": mode,
+            "device": str(device),
+            "store_on_device": store_on_device,
+            "random_rollover": random_rollover,
+        }
+
         # store the device
         self.device = device
         self.storage_device = self.device if store_on_device else torch.device("cpu")
@@ -71,6 +83,65 @@ class FlatReplayBuffer(ReplayBuffer):
             raise MemorialException(
                 f"Unknown mode {mode}. Only `'numpy'` and `'torch'` are allowed."
             )
+
+    def dump(self, fileobj: io.BytesIO | io.BufferedRandom) -> None:
+        """Dump the replay buffer to a fileobj.
+
+        Args:
+            fileobj (io.BytesIO | io.BufferedRandom): filepath
+
+        Returns:
+            None:
+        """
+        if not fileobj.writable():
+            raise ValueError("The file object must be writable.")
+
+        with zipfile.ZipFile(fileobj, "w", zipfile.ZIP_DEFLATED) as zipf:
+            # save the init params
+            dict_bytes = json.dumps(self.init_params).encode("utf-8")
+            zipf.writestr("init_params.json", dict_bytes)
+
+            # save the memory
+            for i, array in enumerate(self.memory):
+                # cast from torch if necessary
+                if isinstance(array, torch.Tensor):
+                    array = array.cpu().numpy()
+
+                # save each array
+                with io.BytesIO() as array_buffer:
+                    np.save(array_buffer, array)
+                    zipf.writestr(f"memory_{i}.npy", array_buffer.getvalue())
+
+    @staticmethod
+    def load(fileobj: io.BytesIO | io.BufferedRandom) -> FlatReplayBuffer:
+        """Loads the replay buffer from a fileobj.
+
+        Args:
+            fileobj (io.BytesIO | io.BufferedRandom): filepath
+
+        Returns:
+            None:
+        """
+        if not fileobj.readable():
+            raise ValueError("The file object must be readable.")
+
+        with zipfile.ZipFile(fileobj, "r") as zipf:
+            # load init params
+            dict_bytes = zipf.read("init_params.json")
+            init_params = json.loads(dict_bytes.decode("utf-8"))
+
+            # load numpy arrays
+            memory = []
+            for name in zipf.namelist():
+                if name.startswith("memory_"):
+                    with zipf.open(name) as array_file:
+                        array = np.load(array_file)
+                        memory.append(array)
+
+        # load the buffer and return it
+        replay_buffer = FlatReplayBuffer(**init_params)
+        replay_buffer.push(memory, bulk=True)
+        return replay_buffer
 
     def __getitem__(self, idx: int) -> list[np.ndarray | torch.Tensor]:
         """__getitem__.

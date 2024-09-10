@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import tempfile
 from copy import deepcopy
 from itertools import product
 from pprint import pformat
@@ -35,6 +36,76 @@ ALL_CONFIGURATIONS = list(
         _use_dict,
     )
 )
+
+
+@pytest.mark.parametrize(
+    "random_rollover, mode, device, store_on_device, use_dict",
+    ALL_CONFIGURATIONS,
+)
+def test_non_bulk(
+    random_rollover: bool,
+    mode: Literal["numpy", "torch"],
+    device: torch.device,
+    store_on_device: bool,
+    use_dict: bool,
+):
+    """Tests the replay buffer generically."""
+    mem_size = 11
+    shapes = create_shapes(use_dict=use_dict)
+    memory = create_memory(
+        mem_size=mem_size,
+        mode=mode,
+        device=device,
+        store_on_device=store_on_device,
+        random_rollover=random_rollover,
+        use_dict=use_dict,
+    )
+
+    previous_data = []
+    for iteration in range(20):
+        current_data = []
+        for shape in shapes:
+            if isinstance(shape, (list, tuple)):
+                current_data.append(generate_random_flat_data(shape=shape, mode=mode))
+            elif isinstance(shape, dict):
+                current_data.append(generate_random_dict_data(shapes=shape, mode=mode))
+            else:
+                raise ValueError
+        memory.push(current_data)
+
+        # if random rollover and we're more than full, different matching method
+        if random_rollover and memory.is_full:
+            num_current_matches = 0
+            num_previous_matches = 0
+            for item in memory:
+                num_current_matches += int(are_equivalent(item, current_data))
+                num_previous_matches += int(are_equivalent(item, previous_data))
+
+            assert (
+                num_current_matches == 1
+            ), f"""Expected 1 match for current_data, got {num_current_matches}."""
+            assert (
+                num_previous_matches <= 1
+            ), f"""Expected 1 or 0 match for previous_data, got {num_previous_matches}."""
+
+            continue
+
+        # check the current data
+        output = memory.__getitem__(iteration % mem_size)
+        assert are_equivalent(
+            output, current_data
+        ), f"""Something went wrong with rollover at iteration {iteration},
+            expected \n{pformat(current_data)}, got \n{pformat(output)}."""
+
+        # check the previous data
+        if iteration > 0:
+            output = memory[(iteration - 1) % mem_size]
+            assert are_equivalent(
+                output, previous_data
+            ), f"""Something went wrong with rollover at iteration {iteration},
+                expected \n{pformat(previous_data)}, got \n{pformat(output)}."""
+
+        previous_data = deepcopy(current_data)
 
 
 @pytest.mark.parametrize(
@@ -112,17 +183,17 @@ def test_bulk(
     "random_rollover, mode, device, store_on_device, use_dict",
     ALL_CONFIGURATIONS,
 )
-def test_non_bulk(
+def test_serialization(
     random_rollover: bool,
     mode: Literal["numpy", "torch"],
     device: torch.device,
     store_on_device: bool,
     use_dict: bool,
 ):
-    """Tests the replay buffer generically."""
+    """Tests serializing and deserializing the buffer."""
     mem_size = 11
     shapes = create_shapes(use_dict=use_dict)
-    memory = create_memory(
+    memory_1 = create_memory(
         mem_size=mem_size,
         mode=mode,
         device=device,
@@ -131,48 +202,29 @@ def test_non_bulk(
         use_dict=use_dict,
     )
 
-    previous_data = []
-    for iteration in range(20):
-        current_data = []
+    # add some data to the memory
+    for _ in range(10):
+        # try to stuff:
+        # a) (bulk_size, 3) array
+        # b) (bulk_size,) array
+        data = []
         for shape in shapes:
             if isinstance(shape, (list, tuple)):
-                current_data.append(generate_random_flat_data(shape=shape, mode=mode))
+                data.append(generate_random_flat_data(shape=shape, mode=mode))
             elif isinstance(shape, dict):
-                current_data.append(generate_random_dict_data(shapes=shape, mode=mode))
+                data.append(generate_random_dict_data(shapes=shape, mode=mode))
             else:
                 raise ValueError
-        memory.push(current_data)
+        memory_1.push(data)
 
-        # if random rollover and we're more than full, different matching method
-        if random_rollover and memory.is_full:
-            num_current_matches = 0
-            num_previous_matches = 0
-            for item in memory:
-                num_current_matches += int(are_equivalent(item, current_data))
-                num_previous_matches += int(are_equivalent(item, previous_data))
+    # dump and load the buffer
+    with tempfile.TemporaryFile(suffix=".zip") as f:
+        memory_1.dump(f)
+        memory_2 = type(memory_1).load(f)
 
-            assert (
-                num_current_matches == 1
-            ), f"""Expected 1 match for current_data, got {num_current_matches}."""
-            assert (
-                num_previous_matches <= 1
-            ), f"""Expected 1 or 0 match for previous_data, got {num_previous_matches}."""
-
-            continue
-
-        # check the current data
-        output = memory.__getitem__(iteration % mem_size)
+    # check each element is equal
+    for i in range(mem_size):
         assert are_equivalent(
-            output, current_data
-        ), f"""Something went wrong with rollover at iteration {iteration},
-            expected \n{pformat(current_data)}, got \n{pformat(output)}."""
-
-        # check the previous data
-        if iteration > 0:
-            output = memory[(iteration - 1) % mem_size]
-            assert are_equivalent(
-                output, previous_data
-            ), f"""Something went wrong with rollover at iteration {iteration},
-                expected \n{pformat(previous_data)}, got \n{pformat(output)}."""
-
-        previous_data = deepcopy(current_data)
+            memory_1[i], memory_2[i]
+        ), f"""Something went wrong with storing element {i},
+            expected \n{pformat(memory_1[i])}, got \n{pformat(memory_2[i])}."""

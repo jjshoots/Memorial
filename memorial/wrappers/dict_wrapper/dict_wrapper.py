@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import io
+import json
+import zipfile
 from collections.abc import Mapping, Sequence
 from typing import Any, Union
 
@@ -24,19 +27,26 @@ _NestedDict = Mapping[str, Union[int, "_NestedDict"]]
 class DictReplayBufferWrapper(ReplayBufferWrapper):
     """Replay Buffer Wrapper that allows the underlying replay buffer to take in nested dicts."""
 
-    def __init__(self, replay_buffer: FlatReplayBuffer) -> None:
+    def __init__(
+        self, replay_buffer: FlatReplayBuffer, from_populated: bool = False
+    ) -> None:
         """__init__.
 
         If bulk adding items, this expects dictionary items to be a dictionary of lists, NOT a list of dictionaries.
 
         Args:
-            self:
             replay_buffer (FlatReplayBuffer): replay_buffer
+            from_populated (bool): whether we allow `replay_buffer` to already have items or not
+
 
         Returns:
             None:
 
         """
+        if not from_populated and replay_buffer.count > 0:
+            raise MemorialException(
+                "Cannot initialize `DictReplayBufferWrapper` from an already populated `FlatReplayBuffer`."
+            )
         super().__init__(replay_buffer)
 
         # this is a list where:
@@ -46,6 +56,67 @@ class DictReplayBufferWrapper(ReplayBufferWrapper):
         #   - if the value is a dict, means that this data holds a nested dict
         self.mapping: list[int | _NestedDict] = []
         self.total_elements = 0
+
+    def dump(self, fileobj: io.BytesIO | io.BufferedRandom) -> None:
+        """Dump the replay buffer to a fileobj.
+
+        Args:
+            fileobj (io.BytesIO | io.BufferedRandom): filepath
+
+        Returns:
+            None:
+        """
+        if not fileobj.writable():
+            raise ValueError("The file object must be writable.")
+
+        # dump the base buffer
+        base_buffer_io = io.BytesIO()
+        self.base_buffer.dump(base_buffer_io)
+        base_buffer_io.seek(0)
+
+        # save everything
+        with zipfile.ZipFile(fileobj, "w", zipfile.ZIP_DEFLATED) as zipf:
+            # save the running params
+            dict_bytes = json.dumps(
+                {
+                    "mapping": self.mapping,
+                    "total_elements": self.total_elements,
+                }
+            ).encode("utf-8")
+            zipf.writestr("running_params.json", dict_bytes)
+
+            # save the base buffer
+            zipf.writestr("base_buffer.zip", base_buffer_io.getvalue())
+
+    @staticmethod
+    def load(fileobj: io.BytesIO | io.BufferedRandom) -> DictReplayBufferWrapper:
+        """Loads the replay buffer from a fileobj.
+
+        Args:
+            fileobj (io.BytesIO | io.BufferedRandom): filepath
+
+        Returns:
+            None:
+        """
+        if not fileobj.readable():
+            raise ValueError("The file object must be readable.")
+
+        with zipfile.ZipFile(fileobj, "r") as zipf:
+            # load running params
+            dict_bytes = zipf.read("running_params.json")
+            running_params = json.loads(dict_bytes.decode("utf-8"))
+
+            # load the base_buffer
+            base_buffer_io = io.BytesIO(zipf.read("base_buffer.zip"))
+            base_buffer = FlatReplayBuffer.load(base_buffer_io)
+
+        # reconstruct the buffer
+        replay_buffer = DictReplayBufferWrapper(
+            replay_buffer=base_buffer, from_populated=True
+        )
+        replay_buffer.mapping = running_params["mapping"]
+        replay_buffer.total_elements = running_params["total_elements"]
+        return replay_buffer
 
     @staticmethod
     def _recursive_unpack_dict_mapping(
@@ -211,7 +282,7 @@ class DictReplayBufferWrapper(ReplayBufferWrapper):
             Sequence[np.ndarray | torch.Tensor | float | int | bool]:
 
         """
-        if len(self) == 0:
+        if not self.mapping:
             self.mapping, self.total_elements = self._generate_mapping(
                 wrapped_data=wrapped_data
             )
@@ -295,6 +366,7 @@ class DictReplayBufferWrapper(ReplayBufferWrapper):
             Sequence[dict[str, np.ndarray | torch.Tensor] | np.ndarray | torch.Tensor | float | int | bool]:
 
         """
+        print(self.mapping)
         wrapped_data: list[Any] = [None] * len(self.mapping)
 
         for i, idx_map in enumerate(self.mapping):
