@@ -1,0 +1,25 @@
+name: linux-test
+on: [pull_request, push]
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+jobs:
+  build-all:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Test
+        run: |
+          pip install -e .
+          pip install torch
+          pip install pytest
+          pytest -v -rw test/test_core.py
+          pytest -v -rw test/test_utils.py
