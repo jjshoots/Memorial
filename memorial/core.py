@@ -46,6 +46,13 @@ class ReplayBuffer:
 
     @property
     def nbytes(self) -> int:
+        """Number of bytes that the core replay buffer is consuming.
+
+        Args:
+
+        Returns:
+            int:
+        """
         return sum([d.nbytes for d in self.memory])
 
     @property
@@ -192,7 +199,6 @@ class ReplayBufferWrapper(ReplayBuffer):
                 [m[: min(other.mem_size, other.count)] for m in other.memory],
                 bulk=True,
             )
-
 
     def __len__(self) -> int:
         """The number of memory items this replay buffer is holding."""

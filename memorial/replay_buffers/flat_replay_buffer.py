@@ -7,8 +7,8 @@ from typing import Literal, Sequence
 
 import numpy as np
 
-from memorial.utils import MemorialException
 from memorial.core import ReplayBuffer
+from memorial.utils import MemorialException
 
 try:
     import torch
@@ -16,8 +16,6 @@ except ImportError as e:
     raise ImportError(
         "Could not import torch, this is not bundled as part of Memorial and has to be installed manually."
     ) from e
-
-from memorial.utils import cstr
 
 
 class _Mode(Enum):
@@ -156,7 +154,9 @@ class FlatReplayBuffer(ReplayBuffer):
         else:
             bulk_size = data[0].shape[0]  # pyright: ignore
             # assert all items have same length
-            if not all([len(item) == bulk_size for item in array_data]):  # pyright: ignore[reportArgumentType]
+            if not all(
+                [len(item) == bulk_size for item in array_data]
+            ):  # pyright: ignore[reportArgumentType]
                 raise MemorialException(
                     "All things in data must have same len for the first dimension for bulk data. "
                     f"Received data with {[len(item) for item in array_data]} items respectively.",

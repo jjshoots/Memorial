@@ -7,8 +7,8 @@ from typing import Any, Literal
 import numpy as np
 import torch
 
-from memorial.replay_buffers import FlatReplayBuffer
 from memorial.core import ReplayBuffer
+from memorial.replay_buffers import FlatReplayBuffer
 from memorial.wrappers import DictReplayBufferWrapper
 
 

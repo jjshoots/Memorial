@@ -20,6 +20,14 @@ dependencies = ["numpy", "prefetch-generator"]
 keywords = ["Machine Learning", "Reinforcement Learning"]
 license = { file="./LICENSE.txt" }
 
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "pre-commit",
+  "torch",
+]
+
 [tool.setuptools]
 include-package-data = true
 

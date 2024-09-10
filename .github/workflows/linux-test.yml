@@ -18,8 +18,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Test
         run: |
-          pip install -e .
-          pip install torch
-          pip install pytest
+          pip install -e .[dev]
           pytest -v -rw test/test_core.py
           pytest -v -rw test/test_utils.py

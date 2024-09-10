@@ -6,9 +6,9 @@ from typing import Any, Mapping, Sequence, Union
 
 import numpy as np
 
-from memorial.utils import MemorialException
 from memorial.core import ReplayBufferWrapper
 from memorial.replay_buffers.flat_replay_buffer import FlatReplayBuffer
+from memorial.utils import MemorialException
 
 try:
     import torch
