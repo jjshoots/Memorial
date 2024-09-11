@@ -36,7 +36,7 @@ class FlatReplayBuffer(ReplayBuffer):
         self,
         mem_size: int,
         mode: Literal["numpy", "torch"] = "numpy",
-        device: torch.device = torch.device("cpu"),
+        device: str | torch.device = torch.device("cpu"),
         store_on_device: bool = False,
         random_rollover: bool = False,
     ):
@@ -45,7 +45,7 @@ class FlatReplayBuffer(ReplayBuffer):
         Args:
             mem_size (int): number of transitions the replay buffer aims to hold
             mode (Literal["numpy", "torch"]): Whether to store data as "torch" or "numpy".
-            device (torch.device): The target device that data will be retrieved to if "torch".
+            device (str | torch.device): The target device that data will be retrieved to if "torch".
             store_on_device (bool): Whether to store the entire replay on the specified device, otherwise stored on CPU.
             random_rollover (bool): whether to rollover the data in the replay buffer once full or to randomly insert
 
@@ -62,7 +62,7 @@ class FlatReplayBuffer(ReplayBuffer):
         }
 
         # store the device
-        self.device = device
+        self.device = torch.device(device)
         self.storage_device = self.device if store_on_device else torch.device("cpu")
 
         # random rollover
