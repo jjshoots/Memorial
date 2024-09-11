@@ -366,7 +366,6 @@ class DictReplayBufferWrapper(ReplayBufferWrapper):
             Sequence[dict[str, np.ndarray | torch.Tensor] | np.ndarray | torch.Tensor | float | int | bool]:
 
         """
-        print(self.mapping)
         wrapped_data: list[Any] = [None] * len(self.mapping)
 
         for i, idx_map in enumerate(self.mapping):
