@@ -107,6 +107,9 @@ class FlatReplayBuffer(ReplayBuffer):
                 if isinstance(array, torch.Tensor):
                     array = array.cpu().numpy()
 
+                # splice out only the length required
+                array = array[: len(self)]
+
                 # save each array
                 with io.BytesIO() as array_buffer:
                     np.save(array_buffer, array)
@@ -171,7 +174,11 @@ class FlatReplayBuffer(ReplayBuffer):
         if self.mode == _Mode.NUMPY:
             # cast from torch if needed
             if isinstance(thing, torch.Tensor):
-                thing = thing.detach().cpu().numpy()
+                thing = (
+                    thing.detach()  # pyright: ignore[reportGeneralTypeIssues]
+                    .cpu()  # pyright: ignore[reportGeneralTypeIssues]
+                    .numpy()  # pyright: ignore[reportGeneralTypeIssues]
+                )
 
             # cast to the right dtype
             data = np.asarray(  # pyright: ignore[reportGeneralTypeIssues, reportCallIssue]
