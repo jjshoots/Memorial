@@ -101,7 +101,7 @@ class ReplayBuffer:
 
         """
         self.push(
-            [m[: min(other.mem_size, other.count)] for m in other.memory],
+            [m[: len(other)] for m in other.memory],
             bulk=True,
         )
 
@@ -216,12 +216,12 @@ class ReplayBufferWrapper(ReplayBuffer):
                 return
 
             self.base_buffer.push(
-                [m[1 : min(other.mem_size, other.count)] for m in other.memory],
+                [m[1 : len(other)] for m in other.memory],
                 bulk=True,
             )
         else:
             self.base_buffer.push(
-                [m[: min(other.mem_size, other.count)] for m in other.memory],
+                [m[: len(other)] for m in other.memory],
                 bulk=True,
             )
 
