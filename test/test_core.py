@@ -191,7 +191,7 @@ def test_serialization(
     use_dict: bool,
 ):
     """Tests serializing and deserializing the buffer."""
-    mem_size = 11
+    mem_size = 17
     shapes = create_shapes(use_dict=use_dict)
     memory_1 = create_memory(
         mem_size=mem_size,
@@ -228,3 +228,6 @@ def test_serialization(
             memory_1[i], memory_2[i]
         ), f"""Something went wrong with storing element {i},
             expected \n{pformat(memory_1[i])}, got \n{pformat(memory_2[i])}."""
+
+    # check that both memories have the same number of items
+    assert len(memory_1) == len(memory_2)
