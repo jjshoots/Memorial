@@ -100,6 +100,8 @@ class ReplayBuffer:
             None:
 
         """
+        assert type(other) is type(self)
+
         self.push(
             [m[: len(other)] for m in other.memory],
             bulk=True,
