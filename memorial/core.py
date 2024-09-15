@@ -205,6 +205,8 @@ class ReplayBufferWrapper(ReplayBuffer):
             None:
 
         """
+        assert type(other) is type(self)
+
         # can't merge when the other one has 0 items
         assert other.count > 0
 
@@ -216,12 +218,12 @@ class ReplayBufferWrapper(ReplayBuffer):
                 return
 
             self.base_buffer.push(
-                [m[1 : len(other)] for m in other.memory],
+                [m[1 : len(other)] for m in other.base_buffer.memory],
                 bulk=True,
             )
         else:
             self.base_buffer.push(
-                [m[: len(other)] for m in other.memory],
+                [m[: len(other)] for m in other.base_buffer.memory],
                 bulk=True,
             )
 
