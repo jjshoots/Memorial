@@ -112,7 +112,7 @@ class FlatReplayBuffer(ReplayBuffer):
 
                 # save each array
                 with io.BytesIO() as array_buffer:
-                    np.save(array_buffer, array)
+                    np.save(array_buffer, array, allow_pickle=False)
                     zipf.writestr(f"memory_{i}.npy", array_buffer.getvalue())
 
     @staticmethod
