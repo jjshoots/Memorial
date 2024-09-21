@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import tempfile
 from copy import deepcopy
 from itertools import product
@@ -217,17 +218,28 @@ def test_serialization(
                 raise ValueError
         memory_1.push(data)
 
-    # dump and load the buffer
+    # dump and load the buffer to disk
     with tempfile.TemporaryFile(suffix=".zip") as f:
         memory_1.dump(f)
         memory_2 = type(memory_1).load(f)
+
+    # dump to memory
+    bytes_io = io.BytesIO()
+    memory_1.dump(bytes_io)
+    memory_3 = type(memory_1).load(bytes_io)
 
     # check each element is equal
     for i in range(mem_size):
         assert are_equivalent(
             memory_1[i], memory_2[i]
-        ), f"""Something went wrong with storing element {i},
+        ), f"""Something went wrong with storing element {i} as zip file,
             expected \n{pformat(memory_1[i])}, got \n{pformat(memory_2[i])}."""
+
+        assert are_equivalent(
+            memory_1[i], memory_3[i]
+        ), f"""Something went wrong with storing element {i} as BytesIO,
+            expected \n{pformat(memory_1[i])}, got \n{pformat(memory_3[i])}."""
 
     # check that both memories have the same number of items
     assert len(memory_1) == len(memory_2)
+    assert len(memory_1) == len(memory_3)
